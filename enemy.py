@@ -8,6 +8,7 @@ pygame.font.init()
 
 vec = pygame.math.Vector2
 
+#set up
 
 WIDTH = 1550
 HEIGHT = 820
@@ -25,26 +26,15 @@ BG = pygame.transform.scale(pygame.image.load(os.path.join("healthbar", "backgro
 BG_START = pygame.transform.scale(pygame.image.load(os.path.join('healthbar','bg3.jpg')),(WIDTH,HEIGHT))
 BG_RESTART = pygame.transform.scale(pygame.image.load(os.path.join('healthbar','bg4.jpg')),(WIDTH,HEIGHT))
 
-LASER_IMG = pygame.transform.scale(pygame.image.load(os.path.join('healthbar','laser.png')),(300,400))
-class Laser:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-        self.img = LASER_IMG
-        self.mask = pygame.mask.from_surface(self.img)
+CHARACTER_1 = pygame.image.load(os.path.join('healthbar','character1.png'))
+CHARACTER_2 = pygame.image.load(os.path.join('healthbar','character2.png'))
+CHARACTER_3 = pygame.image.load(os.path.join('healthbar','character3.png'))
 
-    def draw(self, window):
-        window.blit(self.img, (self.x, self.y))
-
-    def move(self, vel):
-        self.x += vel
-
-    def off_screen(self, height):
-        return not(self.y <= height and self.y >= 0)
-
-    def collision(self, obj):
-        return collide(self, obj)
-
+velocity_y = 0
+gravity = 0.5
+# moving_sprite=pygame.sprite.Group()
+# player=Player(100,100)
+# moving_sprite.add(player)
 class HealthBar :
     def __init__(self, x, y,health):
         super().__init__()
@@ -94,32 +84,88 @@ class Enemy:
     def collision(self, obj):
         return collide(self, obj)
 
-class Player:
-    def __init__(self,x,y,health = 1000):
-        self.player_img = PLAYER
+class Player(pygame.sprite.Sprite):
+    def __init__(self,x, y) :
+        super().__init__()
+        self.back = False
+        self.forward = False
+        self.up = False
+        self.is_animating=False
+        self.sprites=[]
+        self.sprites.append(CHARACTER_1)
+        self.sprites.append(CHARACTER_2)
+        self.sprites.append(CHARACTER_3)
         self.x = x
         self.y = y
-        self.health = health
-        self.mask = pygame.mask.from_surface(self.player_img)
-    def draw(self,window):
-        window.blit(self.player_img,(self.x,self.y))
-    def collision(self,obj):
-        return collide(self,obj)
+        # self.sprites.append(pygame.image.load('attack_4.png'))
+        # self.sprites.append(pygame.image.load('attack_5.png'))
+        # self.sprites.append(pygame.image.load('attack_6.png'))
+        # self.sprites.append(pygame.image.load('attack_7.png'))
+        # self.sprites.append(pygame.image.load('attack_8.png'))
+        # self.sprites.append(pygame.image.load('attack_9.png'))
+        # self.sprites.append(pygame.image.load('attack_10.png'))
+        self.current_sprite=0
+        self.image=self.sprites[self.current_sprite]
+        self.rect=self.image.get_rect(topleft=(x,y))
+        self.mask = pygame.mask.from_surface(self.image)
+    def atack(self):
+        self.is_animating=True
+    def lui(self):
+        self.back = True
+    def tien(self):
+        self.forward = True
+    def len(self):
+        self.up = True
+    def update(self,speed):
+        global velocity_y
+        global gravity
+        if self.is_animating==True:
+            self.current_sprite+=speed
+            if self.current_sprite>= len(self.sprites):
+                self.current_sprite=0
+                self.is_animating=False
+        self.image=self.sprites[int(self.current_sprite)]
+        if self.back == True:
+            self.x = self.x-4
+            self.rect=self.image.get_rect(topleft=(self.x,self.y))
 
+        if self.forward == True:
+            self.x = self.x+4
+            self.rect=self.image.get_rect(topleft=(self.x,self.y))
+        if self.up == True:
+            velocity_y = -6
+        self.y += velocity_y
+        velocity_y += gravity
+        self.rect=self.image.get_rect(topleft=(self.x,self.y))
+        while self.y > 700:
+            self.y = 700
+            self.rect = self.image.get_rect(topleft=(self.x,self.y))
+        if self.y < 300:
+            velocity_y = 0
+            self.y =300
+            self.rect=self.image.get_rect(topleft=(self.x,self.y))
+    
 def collide(obj1,obj2):
     offset_x = obj2.x - obj1.x
     offset_y = obj2.y - obj1.y 
-    return obj1.mask.overlap(obj2.mask, (offset_x, offset_y)) != None    
+    return obj1.mask.overlap(obj2.mask, (offset_x, offset_y)) != None  
+
 def main():
     enemies = [] 
     laser = []
     lost = False
     lives = 3
-    player = Player(750,700)
     take_damage = 1
     health = 2
     scores = 0 
     laser_num = 1
+    moving_sprite=pygame.sprite.Group()
+    player=Player(100,700)
+    moving_sprite.add(player)
+    wave_length = 10
+    enemy_vel = 5
+    enemy_vel = float(enemy_vel)
+    clock = pygame.time.Clock()
 
     def reset_game():
         run = True
@@ -143,11 +189,13 @@ def main():
         scores_font = pygame.font.SysFont("comicsans", 70)
         scores_label =  scores_font.render(f"score : {scores}", 1, (255,255,255))
         WIN.blit(BG, (0,0))
+        moving_sprite.draw(WIN)
+        moving_sprite.update(0.3)
         WIN.blit(scores_label, (1140, 3))
-        player.draw(WIN)
+        # player.draw(WIN)
 
-        for laser_player in laser :
-            laser_player.draw(WIN)
+        # for laser_player in laser :
+        #     laser_player.draw(WIN)
 
         for enemFromRight in enemies :
             enemFromRight.draw(WIN)
@@ -156,11 +204,6 @@ def main():
         health_bar.render(WIN)
         pygame.display.update()
 
-    wave_length = 5
-
-    enemy_vel = 5
-    enemy_vel = float(enemy_vel)
-    clock = pygame.time.Clock()
     run = True 
     while run :
         laser_num += 1
@@ -170,45 +213,61 @@ def main():
         if  len(enemies) == 0 :
             enemy_vel += 0.5
             wave_length += 5
-            for n in range(1):
-                laser_player = Laser(700,400)
-                laser.append(laser_player)
+            # for n in range(1):
+            #     laser_player = Laser(700,400)
+            #     laser.append(laser_player)
             for i in range(wave_length):
                 enemFromRight = Enemy(random.randrange(1550,3000),random.randrange(500,800))   
                 enemies.append(enemFromRight)
 
-        for laser_player in laser[:]:
-            laser_player.move(enemy_vel)
+        # for laser_player in laser[:]:
+        #     laser_player.move(enemy_vel)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT :
                 run = False
+
+            if event.type==pygame.KEYDOWN:
+                if event.key == pygame.K_j:
+                    player.atack()
+                elif event.key == pygame.K_a:
+                    player.lui()
+                elif event.key == pygame.K_d:
+                    player.tien()
+                elif event.key == pygame.K_w:
+                    player.len()
+
+            if event.type==pygame.KEYUP:
+                if event.key == pygame.K_a:
+                    player.back = False
+                elif event.key == pygame.K_d:
+                    player.forward = False
+                elif event.key == pygame.K_w:
+                    player.up = False
         
         for enemFromRight in enemies[:]:
             enemFromRight.move(enemy_vel)
             if enemFromRight.x + enemFromRight.get_width() < 50:
-                # lost == True
                 enemies.remove(enemFromRight)
-
+                lost = True
             if collide(enemFromRight,player):
                 health -= 1
                 enemies.remove(enemFromRight)
                 lives = lives - 1
 
-        for enemFromRight in enemies[:]:
-            for laser_player in laser[:]:
-                if collide(laser_player,enemFromRight):
-                    enemies.remove(enemFromRight)
-                    laser.remove(laser_player)
-                    scores += 1
+        # for enemFromRight in enemies[:]:
+        #     # for laser_player in laser[:]:
+        #         if collide(laser_player,enemFromRight):
+        #             enemies.remove(enemFromRight)
+        #             # laser.remove(laser_player)
+        #             scores += 1
 
-        if lives == 0:
-            WIN.blit(LAST_HEART,(10,10))
-            lost = True
-            lost_count += 1
-        if lost:
+            if lives == 0:
+                WIN.blit(LAST_HEART,(10,10))
+                lost = True
+                lost_count += 1
+            if lost == True:
                 reset_game()
-                
         draw_window()
     pygame.quit()
 def main_menu():
