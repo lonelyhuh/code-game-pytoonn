@@ -5,6 +5,7 @@ import time
 from pygame.locals import *
 
 pygame.font.init()
+pygame.mixer.init()
 
 vec = pygame.math.Vector2
 
@@ -17,7 +18,7 @@ WHITE = (255,255,255)
 X,Y = 40,50
 PLAYER = pygame.transform.scale(pygame.image.load(os.path.join('tai nguyen','monster.png')),(X+50,Y+40))
 FPS = 160
-ENEMY_IMG = pygame.transform.scale(pygame.image.load(os.path.join('tai nguyen','monster 2.png')),(X,Y))
+ENEMY_IMG = pygame.transform.scale(pygame.image.load(os.path.join('healthbar','nani.png')),(300,250))
 WIN = pygame.display.set_mode((WIDTH,HEIGHT)) 
 pygame.display.set_caption('dong anh dzai 102')
 LAST_HEART = pygame.image.load(os.path.join('healthbar','heart4.png'))
@@ -29,12 +30,31 @@ BG_RESTART = pygame.transform.scale(pygame.image.load(os.path.join('healthbar','
 CHARACTER_1 = pygame.image.load(os.path.join('healthbar','character1.png'))
 CHARACTER_2 = pygame.image.load(os.path.join('healthbar','character2.png'))
 CHARACTER_3 = pygame.image.load(os.path.join('healthbar','character3.png'))
+LASER = pygame.transform.scale(pygame.image.load(os.path.join('healthbar','bullet.png')),(X,Y))
 
 velocity_y = 0
-gravity = 0.5
-# moving_sprite=pygame.sprite.Group()
-# player=Player(100,100)
-# moving_sprite.add(player)
+gravity = 0.7
+#sound
+BULLET_FIRE_SOUND = pygame.mixer.Sound('Assets/Gun+Silencer.mp3')
+class Laser:
+    def __init__(self, x, y, img):
+        self.x = x
+        self.y = y
+        self.img = img
+        self.mask = pygame.mask.from_surface(self.img) #chọn pixel của viên đạn
+
+    def draw(self, window):
+        window.blit(self.img, (self.x, self.y)) #vẽ lên màn hình
+
+    def move(self, vel):
+        self.x += vel
+
+    def off_screen(self, height):
+        return not(self.y <= height and self.y >= 0)
+
+    def collision(self, obj):
+        return collide(self, obj) #dùng cái hàm collide bên dưới (va chạm)
+
 class HealthBar :
     def __init__(self, x, y,health):
         super().__init__()
@@ -75,7 +95,7 @@ class Enemy:
         self.y = y
         self.health = health
         self.mask = pygame.mask.from_surface(self.enemy_img) 
-    def move(self,vel):
+    def move_enemy(self,vel):
         self.x -= vel
     def draw(self,window):
         window.blit(self.enemy_img,(self.x,self.y))
@@ -84,7 +104,7 @@ class Enemy:
     def collision(self, obj):
         return collide(self, obj)
 
-class Player(pygame.sprite.Sprite):
+class Player(pygame.sprite.Sprite,Laser):
     def __init__(self,x, y) :
         super().__init__()
         self.back = False
@@ -97,6 +117,8 @@ class Player(pygame.sprite.Sprite):
         self.sprites.append(CHARACTER_3)
         self.x = x
         self.y = y
+        self.laser_img = LASER
+        self.lasers = []
         # self.sprites.append(pygame.image.load('attack_4.png'))
         # self.sprites.append(pygame.image.load('attack_5.png'))
         # self.sprites.append(pygame.image.load('attack_6.png'))
@@ -140,41 +162,46 @@ class Player(pygame.sprite.Sprite):
         while self.y > 700:
             self.y = 700
             self.rect = self.image.get_rect(topleft=(self.x,self.y))
-        if self.y < 300:
+        if self.y < 270:
             velocity_y = 0
-            self.y =300
+            self.y =270
             self.rect=self.image.get_rect(topleft=(self.x,self.y))
-    
+        if self.x > 1400:
+            self.x = 1400
+            self.rect=self.image.get_rect(topleft=(self.x,self.y))
+        if self.x < 10:
+            self.x = 10
+            self.rect=self.image.get_rect(topleft=(self.x,self.y))
+    def draw(self,window):
+        for laser in self.lasers: 
+            laser.draw(window)
+    def shoot(self): #(dùng để bắn)
+        laser = Laser(self.x+70, self.y+30, self.laser_img)
+        self.lasers.append(laser)
+    def move_laser(self,vel,objs):
+        for laser in self.lasers:
+            laser.move(vel)
+            for obj in objs:
+                if laser.collision(obj):
+                    obj.health -= 50
+                    self.lasers.remove(laser)
+                if obj.health == 0:
+                    objs.remove(obj)
 def collide(obj1,obj2):
     offset_x = obj2.x - obj1.x
     offset_y = obj2.y - obj1.y 
     return obj1.mask.overlap(obj2.mask, (offset_x, offset_y)) != None  
-
-def main():
-    enemies = [] 
-    laser = []
-    lost = False
-    lives = 3
-    take_damage = 1
-    health = 2
-    scores = 0 
-    laser_num = 1
-    moving_sprite=pygame.sprite.Group()
-    player=Player(100,700)
-    moving_sprite.add(player)
-    wave_length = 10
-    enemy_vel = 5
-    enemy_vel = float(enemy_vel)
-    clock = pygame.time.Clock()
-
-    def reset_game():
+def reset_game():
+        music = pygame.mixer.music.load(os.path.join('music','travisscott.mp3'))
+        pygame.mixer.music.play(-1)
         run = True
         while run:
+            lost_font = pygame.font.SysFont("comicsans",200)
             subtext_font = pygame.font.SysFont("comicsans", 50)
             subtext_label =  subtext_font.render("press the mouse to restart", 1, (255,255,255))
             WIN.blit(BG_RESTART,(0,0))
             WIN.blit(subtext_label,(450,450))
-            lost_label = lost_font.render("MÀY NGU", 1, (255,255,255))
+            lost_label = lost_font.render("HUY NGUUUUUUUUU", 1, (255,255,255))
             # subtext = lost_font.render('an vo',1,())
             WIN.blit(lost_label, (WIDTH/2 - lost_label.get_width()/2, 200))
             pygame.display.update()
@@ -185,17 +212,34 @@ def main():
                     main()
         pygame.quit()
 
+def main():
+    music = pygame.mixer.music.load(os.path.join('music','travisscott.mp3'))
+    pygame.mixer.music.play(-1)
+    # open_theme = pygame.mixer.music.load()
+    enemies = [] 
+    lost = False
+    lives = 3
+    take_damage = 1
+    health = 2
+    laser_num = 1
+    laser_vel = 10
+    moving_sprite=pygame.sprite.Group()
+    player=Player(100,700)
+    moving_sprite.add(player)
+    wave_length = 3
+    enemy_vel = 1
+    enemy_vel = float(enemy_vel)
+    clock = pygame.time.Clock()
+    scores = 0
+
     def draw_window() :
         scores_font = pygame.font.SysFont("comicsans", 70)
-        scores_label =  scores_font.render(f"score : {scores}", 1, (255,255,255))
+        scores_label =  scores_font.render(f"scores : {scores}", 1, (255,255,255))
         WIN.blit(BG, (0,0))
+        player.draw(WIN)
         moving_sprite.draw(WIN)
         moving_sprite.update(0.3)
         WIN.blit(scores_label, (1140, 3))
-        # player.draw(WIN)
-
-        # for laser_player in laser :
-        #     laser_player.draw(WIN)
 
         for enemFromRight in enemies :
             enemFromRight.draw(WIN)
@@ -208,20 +252,14 @@ def main():
     while run :
         laser_num += 1
         lost_count = 0
-        lost_font = pygame.font.SysFont("comicsans",200)
         clock.tick(FPS)
         if  len(enemies) == 0 :
             enemy_vel += 0.5
             wave_length += 5
-            # for n in range(1):
-            #     laser_player = Laser(700,400)
-            #     laser.append(laser_player)
-            for i in range(wave_length):
-                enemFromRight = Enemy(random.randrange(1550,3000),random.randrange(500,800))   
-                enemies.append(enemFromRight)
 
-        # for laser_player in laser[:]:
-        #     laser_player.move(enemy_vel)
+            for i in range(wave_length):
+                enemFromRight = Enemy(random.randrange(1550,3000),random.randrange(300,650))   
+                enemies.append(enemFromRight)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT :
@@ -230,6 +268,8 @@ def main():
             if event.type==pygame.KEYDOWN:
                 if event.key == pygame.K_j:
                     player.atack()
+                    player.shoot()
+                    BULLET_FIRE_SOUND.play()
                 elif event.key == pygame.K_a:
                     player.lui()
                 elif event.key == pygame.K_d:
@@ -244,9 +284,9 @@ def main():
                     player.forward = False
                 elif event.key == pygame.K_w:
                     player.up = False
-        
+
         for enemFromRight in enemies[:]:
-            enemFromRight.move(enemy_vel)
+            enemFromRight.move_enemy(enemy_vel)
             if enemFromRight.x + enemFromRight.get_width() < 50:
                 enemies.remove(enemFromRight)
                 lost = True
@@ -254,24 +294,19 @@ def main():
                 health -= 1
                 enemies.remove(enemFromRight)
                 lives = lives - 1
+        player.move_laser(laser_vel,enemies)
 
-        # for enemFromRight in enemies[:]:
-        #     # for laser_player in laser[:]:
-        #         if collide(laser_player,enemFromRight):
-        #             enemies.remove(enemFromRight)
-        #             # laser.remove(laser_player)
-        #             scores += 1
-
-            if lives == 0:
-                WIN.blit(LAST_HEART,(10,10))
-                lost = True
-                lost_count += 1
-            if lost == True:
-                reset_game()
+        if lives == 0:
+            WIN.blit(LAST_HEART,(10,10))
+            lost = True
+            lost_count += 1
+        if lost == True:
+            reset_game()
         draw_window()
     pygame.quit()
 def main_menu():
-
+    music = pygame.mixer.music.load(os.path.join('music','cyberpunk.mp3'))
+    pygame.mixer.music.play(-1)
     title_font = pygame.font.SysFont("comicsans", 70)
     run = True
     while run:
