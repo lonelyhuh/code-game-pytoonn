@@ -9,8 +9,7 @@ pygame.mixer.init()
 
 vec = pygame.math.Vector2
 
-#set up
-
+#set up hình ảnh màn hình âm thanh
 WIDTH = 1550
 HEIGHT = 820
 BLACK = (0,0,0)
@@ -35,6 +34,7 @@ velocity_y = 0
 gravity = 0.7
 #sound
 BULLET_FIRE_SOUND = pygame.mixer.Sound('music/glock_sound.wav')
+#tạo laser
 class Laser:
     def __init__(self, x, y, img):
         self.x = x
@@ -60,7 +60,7 @@ class Laser:
 
     def collision(self, obj):
         return collide(self, obj) #dùng cái hàm collide bên dưới (va chạm)
-
+ #tạo thanh máu
 class HealthBar :
     def __init__(self, x, y,health):
         super().__init__()
@@ -93,7 +93,7 @@ class HealthBar :
                              pygame.image.load("D:/codenek/healthbar/heart3.png").convert_alpha(),
                              pygame.image.load('D:/codenek/healthbar/heart4.png').convert_alpha()
                                     ]
-
+#tạo quái vật
 class Enemy:
     def __init__(self,x,y,health = 100) :
         self.enemy_img = ENEMY_IMG
@@ -109,7 +109,7 @@ class Enemy:
         return self.enemy_img.get_width()
     def collision(self, obj):
         return collide(self, obj)
-
+#tạo người chơi
 class Player(pygame.sprite.Sprite,Laser):
     COOLDOWN = 30
     def __init__(self,x, y,lost) :
@@ -203,17 +203,18 @@ class Player(pygame.sprite.Sprite,Laser):
                     if obj.health == 0:
                         objs.remove(obj)
                         self.score +=1
-
+#tạo score
     def score_display(self):
         if self.lost == False:
             score_surface = game_font.render(str(self.score), True,(255,255,255))
             score_rec = score_surface.get_rect(center = (800,80))
             WIN.blit(score_surface,score_rec)
-
+#tạo va chạm
 def collide(obj1,obj2):
     offset_x = obj2.x - obj1.x
     offset_y = obj2.y - obj1.y 
     return obj1.mask.overlap(obj2.mask, (offset_x, offset_y)) != None  
+#tạo màn hình reset game
 def reset_game():
         music = pygame.mixer.music.load(os.path.join('music','teddybear.mp3'))
         pygame.mixer.music.play(-1)
@@ -227,7 +228,7 @@ def reset_game():
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     main()
         pygame.quit()
-
+#chương trình chính
 def main():
     music = pygame.mixer.music.load(os.path.join('music','eluzai.mp3'))
     pygame.mixer.music.play(-1)
@@ -279,7 +280,7 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT :
                 run = False
-
+#tạo phím di chuyển và bắn cho nhân vật
             if event.type==pygame.KEYDOWN:
                 if event.key == pygame.K_j:
                     player.atack()
@@ -319,6 +320,7 @@ def main():
             reset_game()
         draw_window()
     pygame.quit()
+#tạo main menu
 def main_menu():
     music = pygame.mixer.music.load(os.path.join('music','cyberpunk.mp3'))
     pygame.mixer.music.play(-1)
