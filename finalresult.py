@@ -9,7 +9,8 @@ pygame.mixer.init()
 
 vec = pygame.math.Vector2
 
-#set up hình ảnh màn hình âm thanh
+#set up
+
 WIDTH = 1550
 HEIGHT = 820
 BLACK = (0,0,0)
@@ -22,9 +23,11 @@ pygame.display.set_caption('dong anh dzai 102')
 LAST_HEART = pygame.image.load(os.path.join('healthbar','heart4.png'))
 
 BG = pygame.transform.scale(pygame.image.load(os.path.join("healthbar", "backgroundreal.png")), (WIDTH, HEIGHT))
-BG_START = pygame.transform.scale(pygame.image.load(os.path.join('healthbar','menu.png')),(WIDTH,HEIGHT))
+BG_START = pygame.transform.scale(pygame.image.load(os.path.join('healthbar','menu2.png')),(WIDTH,HEIGHT))
 BG_RESTART = pygame.transform.scale(pygame.image.load(os.path.join('healthbar','gameoverscreen.png')),(WIDTH,HEIGHT))
+BUTTON = pygame.image.load(os.path.join('healthbar','buttonlogo.png'))
 
+BOSS_IMG = pygame.image.load(os.path.join('healthbar','boss.png'))
 CHARACTER_1 = pygame.image.load(os.path.join('healthbar','character1.png'))
 CHARACTER_2 = pygame.image.load(os.path.join('healthbar','character2.png'))
 CHARACTER_3 = pygame.image.load(os.path.join('healthbar','character3.png'))
@@ -34,7 +37,6 @@ velocity_y = 0
 gravity = 0.7
 #sound
 BULLET_FIRE_SOUND = pygame.mixer.Sound('music/glock_sound.wav')
-#tạo laser
 class Laser:
     def __init__(self, x, y, img):
         self.x = x
@@ -60,7 +62,7 @@ class Laser:
 
     def collision(self, obj):
         return collide(self, obj) #dùng cái hàm collide bên dưới (va chạm)
- #tạo thanh máu
+
 class HealthBar :
     def __init__(self, x, y,health):
         super().__init__()
@@ -93,7 +95,47 @@ class HealthBar :
                              pygame.image.load("D:/codenek/healthbar/heart3.png").convert_alpha(),
                              pygame.image.load('D:/codenek/healthbar/heart4.png').convert_alpha()
                                     ]
-#tạo quái vật
+class Button():
+    def __init__(self, x, y, image,scale):
+        width = image.get_width()
+        height = image.get_height()
+        self.image = pygame.transform.scale(image, (int(width * scale), int(height * scale)))
+        self.rect = self.image.get_rect()
+        self.rect.topleft = (x, y)
+        self.clicked = False
+    def Action(self):
+        action = False
+        #get mouse position
+        pos = pygame.mouse.get_pos()
+
+        #check mouseover and clicked conditions
+        if self.rect.collidepoint(pos):
+            if pygame.mouse.get_pressed()[0] == 1 and self.clicked == False :
+                self.clicked = True
+
+                action = True
+
+        if pygame.mouse.get_pressed()[0] == 0:
+            self.clicked = False
+
+        return action
+
+    def draw(self,surface):
+        surface.blit(self.image, (self.rect.x, self.rect.y))
+
+
+class Boss:
+    def __init__(self,x,y,health = 1000) :
+        self.boss_img = BOSS_IMG
+        self.x = x
+        self.y = y
+        self.health = health
+        self.mask = pygame.mask.from_surface(self.boss_img)
+    def draw(self,window):
+        window.blit(self.boss_img,(self.x,self.y))
+    def collision(self, obj):
+        return collide(self, obj)
+
 class Enemy:
     def __init__(self,x,y,health = 100) :
         self.enemy_img = ENEMY_IMG
@@ -109,7 +151,7 @@ class Enemy:
         return self.enemy_img.get_width()
     def collision(self, obj):
         return collide(self, obj)
-#tạo người chơi
+
 class Player(pygame.sprite.Sprite,Laser):
     COOLDOWN = 30
     def __init__(self,x, y,lost) :
@@ -203,18 +245,17 @@ class Player(pygame.sprite.Sprite,Laser):
                     if obj.health == 0:
                         objs.remove(obj)
                         self.score +=1
-#tạo score
+
     def score_display(self):
         if self.lost == False:
-            score_surface = game_font.render(str(self.score), True,(255,255,255))
+            score_surface = game_font.render(f'score : {self.score}', True,(255,255,255))
             score_rec = score_surface.get_rect(center = (800,80))
             WIN.blit(score_surface,score_rec)
-#tạo va chạm
+
 def collide(obj1,obj2):
     offset_x = obj2.x - obj1.x
     offset_y = obj2.y - obj1.y 
     return obj1.mask.overlap(obj2.mask, (offset_x, offset_y)) != None  
-#tạo màn hình reset game
 def reset_game():
         music = pygame.mixer.music.load(os.path.join('music','teddybear.mp3'))
         pygame.mixer.music.play(-1)
@@ -228,12 +269,14 @@ def reset_game():
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     main()
         pygame.quit()
-#chương trình chính
+
 def main():
     music = pygame.mixer.music.load(os.path.join('music','eluzai.mp3'))
     pygame.mixer.music.play(-1)
     # open_theme = pygame.mixer.music.load()
     enemies = [] 
+    bosses = []
+    level = -1
     lost = False
     lives = 3
     take_damage = 1
@@ -244,7 +287,7 @@ def main():
     player=Player(100,700,lost)
     moving_sprite.add(player)
     wave_length = 3
-    enemy_vel = 1
+    enemy_vel = 5
     enemy_vel = float(enemy_vel)
     clock = pygame.time.Clock()
 
@@ -254,11 +297,23 @@ def main():
         moving_sprite.draw(WIN)
         moving_sprite.update(0.3)
 
-        for enemFromRight in enemies :
-            enemFromRight.draw(WIN)
+        g  = False
+
+        if g == False:
+            for enemFromRight in enemies :
+                enemFromRight.draw(WIN)
+
+        for boss in bosses :
+            boss.draw(WIN)
+            # for enemFromRight in enemies:
+            #     enemies.clear()
+            g = True
 
         health_bar = HealthBar(10,10,health)
         health_bar.render(WIN)
+        level_surface = game_font.render(f'level: {level}', True,(255,255,255))
+        level_rec = level_surface.get_rect(topleft = (1300,40))
+        WIN.blit(level_surface,level_rec)
         player.score_display()
         pygame.display.update()
 
@@ -268,19 +323,24 @@ def main():
         lost_count = 0
         clock.tick(FPS)
         if  len(enemies) == 0 :
+            level += 1
             enemy_vel += 0.5
-            wave_length += 5
+            wave_length += 3
 
             for i in range(wave_length):
                 enemFromRight = Enemy(random.randrange(1550,3000),random.randrange(300,650))   
                 enemies.append(enemFromRight)
+            if  wave_length >= 5:
+                boss = Boss(200,500)
+                bosses.append(boss)
+                level += 0
 
                 
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT :
                 run = False
-#tạo phím di chuyển và bắn cho nhân vật
+
             if event.type==pygame.KEYDOWN:
                 if event.key == pygame.K_j:
                     player.atack()
@@ -320,18 +380,22 @@ def main():
             reset_game()
         draw_window()
     pygame.quit()
-#tạo main menu
+
 def main_menu():
     music = pygame.mixer.music.load(os.path.join('music','cyberpunk.mp3'))
     pygame.mixer.music.play(-1)
+    global button
+    button = Button(100,50,BUTTON,0.5)
+    pygame.display.update()
     run = True
     while run:
         WIN.blit(BG_START,(0,0))
+        button.draw(WIN)
         pygame.display.update()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
-            if event.type == pygame.MOUSEBUTTONDOWN:
+            if button.Action():
                 main()
     pygame.quit()
 main_menu()
